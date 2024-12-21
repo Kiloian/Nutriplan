@@ -1,60 +1,71 @@
-package com.nutriplan.app
+package com.nutriplan.app.ui.main
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.nutriplan.app.navigation.BottomNavigationBar
-import com.nutriplan.app.navigation.NavRoutes
-import com.nutriplan.app.ui.mealplan.MealPlanningScreen
-import com.nutriplan.app.ui.recipes.RecipesScreen
-import com.nutriplan.app.ui.shopping.ShoppingListScreen
+import androidx.activity.viewModels
+import androidx.compose.material.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.tooling.preview.Preview
 import com.nutriplan.app.ui.theme.NutriPlanTheme
+import androidx.compose.material.SnackbarDuration
+import androidx.compose.material.rememberScaffoldState
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainActivityViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
             NutriPlanTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                NavHost(
-                                    navController = navController,
-                                    startDestination = NavRoutes.MealPlanning.route
-                                ) {
-                                    composable(NavRoutes.MealPlanning.route) {
-                                        MealPlanningScreen()
-                                    }
-                                    composable(NavRoutes.Recipes.route) {
-                                        RecipesScreen()
-                                    }
-                                    composable(NavRoutes.ShoppingList.route) {
-                                        ShoppingListScreen()
-                                    }
-                                }
-                            }
-
-                            BottomNavigationBar(navController = navController)
-                        }
-                    }
-                }
+                MainScreen(viewModel)
             }
+        }
+
+        // Observe the Snackbar message from the ViewModel
+        lifecycleScope.launchWhenStarted {
+            viewModel.snackbarMessage.collect { message ->
+                scaffoldState.snackbarHostState.showSnackbar(
+                    message = message,
+                    duration = SnackbarDuration.Short
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MainScreen(viewModel: MainActivityViewModel) {
+    val meals by viewModel.meals.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val isError by viewModel.isError.collectAsState()
+    val scaffoldState = rememberScaffoldState()
+
+    Scaffold(
+        scaffoldState = scaffoldState,
+        topBar = { TopAppBar(title = { Text("NutriPlan") }) }
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator()
+        } else if (isError) {
+            Text("Error loading data")
+        } else {
+            MealList(meals = meals) { mealId ->
+                viewModel.getMealDetails(mealId)
+            }
+        }
+    }
+
+    val selectedMeal by viewModel.selectedMeal.collectAsState()
+    selectedMeal?.let { meal ->
+        MealDetailsScreen(meal = meal) {
+            viewModel.clearSelectedMeal()
         }
     }
 }
