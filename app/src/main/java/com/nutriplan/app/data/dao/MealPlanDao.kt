@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MealPlanDao {
+
     @Transaction
     @Query("SELECT * FROM meal_plans WHERE date BETWEEN :startDate AND :endDate")
     fun getMealPlansForDateRange(startDate: String, endDate: String): Flow<List<MealPlanWithRecipes>>

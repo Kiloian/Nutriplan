@@ -2,9 +2,10 @@ package com.nutriplan.app.di
 
 import android.content.Context
 import androidx.room.Room
-import com.nutriplan.app.data.dao.MealDao
+import com.nutriplan.app.data.NutriPlanDatabase
 import com.nutriplan.app.data.dao.MealPlanDao
-import com.nutriplan.app.data.local.MealDatabase
+import com.nutriplan.app.data.dao.RecipeDao
+import com.nutriplan.app.data.dao.ShoppingItemDao
 import com.nutriplan.app.data.remote.MealService
 import dagger.Module
 import dagger.Provides
@@ -19,28 +20,36 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
+    // Provide the Room database
     @Provides
     @Singleton
-    fun provideMealDatabase(@ApplicationContext context: Context): MealDatabase {
+    fun provideNutriPlanDatabase(@ApplicationContext context: Context): NutriPlanDatabase {
         return Room.databaseBuilder(
-            context,
-            MealDatabase::class.java,
-            "meal_database"
-        ).build()
+            context.applicationContext,
+            NutriPlanDatabase::class.java,
+            "nutriplan_database"
+        )
+            .fallbackToDestructiveMigration() // Use proper migrations in production
+            .build()
     }
 
+    // Provide DAOs
     @Provides
-    @Singleton
-    fun provideMealPlanDao(database: MealDatabase): MealPlanDao {
+    fun provideMealPlanDao(database: NutriPlanDatabase): MealPlanDao {
         return database.mealPlanDao()
     }
 
     @Provides
-    @Singleton
-    fun provideMealDao(database: MealDatabase): MealDao {
-        return database.mealDao()
+    fun provideRecipeDao(database: NutriPlanDatabase): RecipeDao {
+        return database.recipeDao()
     }
 
+    @Provides
+    fun provideShoppingItemDao(database: NutriPlanDatabase): ShoppingItemDao {
+        return database.shoppingItemDao()
+    }
+
+    // Provide Retrofit service
     @Provides
     @Singleton
     fun provideMealService(): MealService {

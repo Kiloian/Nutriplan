@@ -29,7 +29,7 @@ class MealPlanViewModel @Inject constructor(
 
     val weeklyMealPlans: StateFlow<Map<String, MealPlanWithRecipes>> =
         _selectedDate.flatMapLatest { date ->
-            val weekStart = date.minusDays(date.dayOfWeek.value.toLong() - 1)
+            val weekStart = date.with(DayOfWeek.MONDAY)
             val weekEnd = weekStart.plusDays(6)
             mealPlanDao.getMealPlansForDateRange(
                 weekStart.toString(),
@@ -38,9 +38,9 @@ class MealPlanViewModel @Inject constructor(
                 mealPlans.associateBy { it.mealPlan.date }
             }
         }.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            emptyMap()
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyMap()
         )
 
     init {
